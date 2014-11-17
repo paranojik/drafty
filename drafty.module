@@ -9,10 +9,6 @@
  */
 function drafty_entity_presave($entity, $type) {
   if (empty($entity->is_new) && !empty($entity->is_draft_revision)) {
-    if (empty($entity->original)) {
-      throw new Exception('Attempt to create draft revision without the original entity being available.');
-    }
-
     // Since this is a draft revision, after saving we want the current,
     // published revision to remain in place in the base entity table and
     // field_data_*() tables. Set the revision to publish once the draft entity
@@ -127,9 +123,8 @@ class Drafty {
    * @return The newly saved revision.
    */
   public function saveRevisionAsNew($type, $revision) {
-    $info = entity_get_info();
+    $revision->revision = TRUE;
     entity_save($type, $revision);
-
     return $revision;
   }
 
