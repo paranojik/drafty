@@ -42,10 +42,14 @@ class DraftyTestCase extends DraftyWebTestCase {
     );
   }
 
-  function setUp() {
-    parent::setUp();
-    $web_user = $this->drupalCreateUser(array('create article content', 'create page content'));
-    $this->drupalLogin($web_user);
+  /**
+   * Make it easy for drafty_enforce to subclass.
+   *
+   * @param $entity
+   *   An entity object.
+   */
+  protected function setRevision($entity) {
+    $entity->revision = TRUE;
   }
 
   /**
@@ -56,7 +60,7 @@ class DraftyTestCase extends DraftyWebTestCase {
     $node->title = 'Title A';
     $node->type = 'article';
     $node->status = 1;
-    $node->revision = TRUE;
+    $this->setRevision($node);
     node_save($node);
 
     // Save the vid for later comparison.
@@ -66,15 +70,13 @@ class DraftyTestCase extends DraftyWebTestCase {
     $node = node_load($node->nid);
     $this->assertEqual($node->title, 'Title A');
     $node->title = 'Title B';
-    $node->revision = TRUE;
+    $this->setRevision($node);
     $node->is_draft_revision = TRUE;
     node_save($node);
-    return;
 
     $draft_vid = $node->vid;
-
     // Confirm that the published and draft version IDs differ.
-    $this->assertEqual($published_vid, $draft_vid);
+    $this->assertNotEqual($published_vid, $draft_vid);
 
     // Confirm that loading the node gets the published revision.
     $node = node_load($node->nid);

@@ -1,0 +1,21 @@
+<?php
+/**
+ * @file
+ * Hook implementations and API functions for drafty module.
+ */
+
+/**
+ * Implements hook_entity_presave().
+ */
+function drafty_enforce_entity_presave($entity, $type) {
+  $entity->revision = TRUE;
+  $entity->is_draft_revision = TRUE;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function drafty_enforce_form_node_form_alter(&$form, &$form_state) {
+  // Since we always force revisions, don't bother showing the option.
+  $form['revision_information']['revision']['#access'] = FALSE;
+}
