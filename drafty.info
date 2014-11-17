@@ -1,0 +1,7 @@
+name = Drafty
+description = Facilitates handling of draft revisions.
+core = 7.x
+
+dependencies[] = entity
+
+files[] = drafty.test

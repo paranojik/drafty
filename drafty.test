@@ -1,0 +1,89 @@
+<?php
+
+/**
+ * @file
+ * Tests for drafty.module.
+ */
+
+/**
+ * Defines a base class for testing the Node module.
+ */
+class DraftyWebTestCase extends NodeWebTestCase {
+  function setUp() {
+    $modules = func_get_args();
+    if (isset($modules[0]) && is_array($modules[0])) {
+      $modules = $modules[0];
+    }
+    $modules[] = 'node';
+    $modules[] = 'entity';
+    $modules[] = 'drafty';
+    parent::setUp($modules);
+
+    // Create Basic page and Article node types.
+    if ($this->profile != 'standard') {
+      $this->drupalCreateContentType(array('type' => 'page', 'name' => 'Basic page'));
+      $this->drupalCreateContentType(array('type' => 'article', 'name' => 'Article'));
+    }
+  }
+}
+
+/**
+ * Test the node_load_multiple() function.
+ */
+class DraftyTestCase extends DraftyWebTestCase {
+
+  protected $type;
+
+  public static function getInfo() {
+    return array(
+      'name' => 'Drafty',
+      'description' => 'Test revision manipulation.',
+      'group' => 'Drafty',
+    );
+  }
+
+  function setUp() {
+    parent::setUp();
+    $web_user = $this->drupalCreateUser(array('create article content', 'create page content'));
+    $this->drupalLogin($web_user);
+  }
+
+  /**
+   * Create four nodes and ensure they're loaded correctly.
+   */
+  function testDraftRevisions() {
+    $node = new stdClass();
+    $node->title = 'Title A';
+    $node->type = 'article';
+    $node->status = 1;
+    $node->revision = TRUE;
+    node_save($node);
+
+    // Save the vid for later comparison.
+    $published_vid = $node->vid;
+
+    // Save a new draft.
+    $node = node_load($node->nid);
+    $this->assertEqual($node->title, 'Title A');
+    $node->title = 'Title B';
+    $node->revision = TRUE;
+    $node->is_draft_revision = TRUE;
+    node_save($node);
+    return;
+
+    $draft_vid = $node->vid;
+
+    // Confirm that the published and draft version IDs differ.
+    $this->assertEqual($published_vid, $draft_vid);
+
+    // Confirm that loading the node gets the published revision.
+    $node = node_load($node->nid);
+    $this->assertEqual($node->title, 'Title A');
+
+    drafty()->publishRevision('node', $draft_vid);
+
+    $node = node_load($node->nid);
+    $this->assertEqual($node->title, 'Title B');
+    $this->assertNotEqual($node->vid, $draft_vid);
+  }
+}
