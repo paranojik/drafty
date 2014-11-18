@@ -4,4 +4,6 @@ core = 7.x
 
 dependencies[] = entity
 
+test_dependencies[] = field_collection
+
 files[] = drafty.test

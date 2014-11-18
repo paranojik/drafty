@@ -6,7 +6,7 @@
  */
 
 /**
- * Defines a base class for testing the Node module.
+ * Defines a base class for testing Drafty revision support.
  */
 class DraftyWebTestCase extends NodeWebTestCase {
   function setUp() {
@@ -14,21 +14,23 @@ class DraftyWebTestCase extends NodeWebTestCase {
     if (isset($modules[0]) && is_array($modules[0])) {
       $modules = $modules[0];
     }
-    $modules[] = 'node';
-    $modules[] = 'entity';
     $modules[] = 'drafty';
     parent::setUp($modules);
+  }
 
-    // Create Basic page and Article node types.
-    if ($this->profile != 'standard') {
-      $this->drupalCreateContentType(array('type' => 'page', 'name' => 'Basic page'));
-      $this->drupalCreateContentType(array('type' => 'article', 'name' => 'Article'));
-    }
+  /**
+   * Make it easy for drafty_enforce to subclass.
+   *
+   * @param $entity
+   *   An entity object.
+   */
+  protected function setRevision($entity) {
+    $entity->revision = TRUE;
   }
 }
 
 /**
- * Test the node_load_multiple() function.
+ * Test drafty revision support with a single entity.
  */
 class DraftyTestCase extends DraftyWebTestCase {
 
@@ -42,18 +44,9 @@ class DraftyTestCase extends DraftyWebTestCase {
     );
   }
 
-  /**
-   * Make it easy for drafty_enforce to subclass.
-   *
-   * @param $entity
-   *   An entity object.
-   */
-  protected function setRevision($entity) {
-    $entity->revision = TRUE;
-  }
 
   /**
-   * Create four nodes and ensure they're loaded correctly.
+   * Create a node and check creation of draft and published revisions. 
    */
   function testDraftRevisions() {
     $node = new stdClass();
@@ -87,5 +80,34 @@ class DraftyTestCase extends DraftyWebTestCase {
     $node = node_load($node->nid);
     $this->assertEqual($node->title, 'Title B');
     $this->assertNotEqual($node->vid, $draft_vid);
+  }
+}
+
+/**
+ * Test drafty revision support with field collections.
+ */
+class DraftyFieldCollectionTest extends DraftyWebTestCase {
+
+  function setUp() {
+    $modules = func_get_args();
+    if (isset($modules[0]) && is_array($modules[0])) {
+      $modules = $modules[0];
+    }
+    $modules[] = 'field_collection';
+    parent::setUp($modules);
+  }
+
+  protected $type;
+
+  public static function getInfo() {
+    return array(
+      'name' => 'Draftyi field collection',
+      'description' => 'Test revision manipulation with field collections.',
+      'group' => 'Drafty',
+    );
+  }
+
+  protected function setUpFields() {
+    // @todo
   }
 }
