@@ -8,8 +8,18 @@
  * Implements hook_entity_presave().
  */
 function drafty_enforce_entity_presave($entity, $type) {
-  $entity->revision = TRUE;
-  $entity->is_draft_revision = TRUE;
+  if (empty($entity->is_new)) {
+    $entity->revision = TRUE;
+    // If Drafty has set a scope already, don't do anything here.
+    if (!drafty()->hasScope()) {
+      $entity->is_draft_revision = TRUE;
+      // Now set the scope so that any entity saves recursively triggered by
+      // this entity save such as field collections do not also trigger the
+      // draft code path. Since this 'parent' entity will have two revisions
+      // saved, that handles any 'child' entities too.
+      drafty()->setScope($entity->is_draft_revision);
+    }
+  }
 }
 
 /**
