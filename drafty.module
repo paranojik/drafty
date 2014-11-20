@@ -42,6 +42,31 @@ function drafty_entity_insert($entity, $type) {
 }
 
 /**
+ * Implements hook_field_attach_update().
+ */
+function drafty_field_attach_load($entity_type, $entities, $age, $options) {
+  // Entity API provides the function entity_revision_is_default() to determine
+  // whether an entity was loaded with the default revision or not. However this
+  // is not sufficient for two reasons.
+  //  - It relies on entity_load() for core entities, which makes it unsafe to
+  //    call within hook_entity_load() implementations. This can be useful when
+  //    allowing drafts to be previewed in context such as listings.
+  //  - The entity API implementation only tells you whether the entity was
+  //    loaded with that revision or not, but not whether it was requested
+  //    with the ID or with the revision explicitly specified.
+
+  // Note that hook_field_attach_load() is the only hook in core where it is
+  // possible to determine whether calling code requested a revision or not,
+  // this information is not available to hook_entity_load(). Also note that
+  // hook_field_attach_load() is cached when entities are loaded only be ID, but
+  // since revision loads don't use the field cache it works fine for our
+  // purposes.
+  foreach ($entities as $entity) {
+    $entity->_drafty_revision_requested = $age;
+  }
+}
+
+/**
  * Factory function for the DraftyTracker class.
  */
 function drafty() {
@@ -96,6 +121,10 @@ class Drafty {
    */
   public function removeScope() {
     $this->scope = NULL;
+  }
+
+  public function wasRevisionRequested($entity) {
+    return isset($entity->_drafty_revision_requested) && $entity->_drafty_revision_requested === FIELD_LOAD_REVISION;
   }
 
   /**
