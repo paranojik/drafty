@@ -8,8 +8,12 @@
  * Implements hook_entity_presave().
  */
 function drafty_enforce_entity_presave($entity, $type) {
-  if (empty($entity->is_new)) {
+  $info = entity_get_info();
+  if (!empty($info[$type]['entity keys']['revision']) && empty($entity->is_new)) {
+    // @todo: entity API function?
     $entity->revision = TRUE;
+    $entity->is_new_revision = TRUE;
+    $entity->default_revision = TRUE;
     // If Drafty has set a scope already, don't do anything here.
     if (!drafty()->hasScope()) {
       $entity->is_draft_revision = TRUE;
