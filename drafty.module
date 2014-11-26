@@ -20,7 +20,8 @@ function drafty_module_implements_alter(&$implementations) {
  * Implements hook_entity_presave().
  */
 function drafty_entity_presave($entity, $type) {
-  if ($type !== 'field_collection_itme' && empty($entity->is_new) && !empty($entity->is_draft_revision)) {
+  $recursion_level = &drupal_static('drafty_recursion_level', 0);
+  if (!$recursion_level && empty($entity->is_new) && !empty($entity->is_draft_revision)) {
     drafty()->setScope($entity->is_draft_revision);
     // Since this is a draft revision, after saving we want the current,
     // published revision to remain in place in the base entity table and
@@ -30,31 +31,36 @@ function drafty_entity_presave($entity, $type) {
     $vid = drafty()->getPublishedRevisionId($type, $id);
     drafty()->setRevisionToBePublished($type, $id, $vid);
   }
+  $recursion_level++;
 }
 
 /**
  * Implements hook_entity_update().
  */
 function drafty_entity_update($entity, $type) {
-  if ($type !== 'field_collection_item') {
+  $recursion_level = &drupal_static('drafty_recursion_level', 0);
+  if ($recursion_level == 1) {
     // Doing this in hook_entity_update() so that the entire process is
     // completed within entity saving. However this results in two entity saves
-    // within entity insert. The other option is hook_exit(), which is not better,
-    // since for example that would happen outside the transaction.
+    // within entity insert. The other option is hook_exit(), which is not
+    // better since for example that would happen outside the transaction.
     drafty()->restorePublishedRevisions();
     drafty()->removeScope();
   }
+  $recursion_level--;
 }
 
 /**
  * Implements hook_entity_insert().
  */
 function drafty_entity_insert($entity, $type) {
-  if ($type !== 'field_collection_item') {
+  $recursion_level = &drupal_static('drafty_recursion_level', 0);
+  if ($recursion_level == 1) {
     // Remove any drafty scope set during revision saving so that it is clear for
     // the next save.
     drafty()->removeScope();
   }
+  $recursion_level--;
 }
 
 /**
