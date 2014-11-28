@@ -203,9 +203,16 @@ class Drafty {
    *
    * @return The newly published revision.
    */
-  function publishRevision($type, $vid) {
+  function publishRevision($type, $id, $vid) {
     $revision = entity_revision_load($type, $vid);
+
+    // Publishing a revision sometimes happens within hook_entity_update(). When
+    // we do that, set $entity->original to the entity we're in the process of
+    // saving. i.e. the draft we're in the process of creating and need to
+    // replace with the published version again.
     $revision->is_draft_revision = FALSE;
+    entity_get_controller($type)->resetCache();
+    $revision->original = entity_load_single($type, $id);
     return $this->saveRevisionAsNew($type, $revision);
   }
 
@@ -241,7 +248,7 @@ class Drafty {
     foreach ($this->revisionsToPublish as $type => $value) {
       foreach ($value as $id => $vid) {
         unset($this->revisionsToPublish[$type][$id]);
-        $this->publishRevision($type, $vid);
+        $this->publishRevision($type, $id, $vid);
         // Now that the revision is deleted, there are two identical copies of
         // the revision in the system. The original 'draft' revision and the
         // newly saved published revision. Delete the draft revision now since
