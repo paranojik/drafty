@@ -22,7 +22,6 @@ function drafty_module_implements_alter(&$implementations) {
 function drafty_entity_presave($entity, $type) {
   $recursion_level = &drupal_static('drafty_recursion_level', 0);
   if (!$recursion_level && empty($entity->is_new) && !empty($entity->is_draft_revision)) {
-    drafty()->setScope($entity->is_draft_revision);
     // Since this is a draft revision, after saving we want the current,
     // published revision to remain in place in the base entity table and
     // field_data_*() tables. Set the revision to publish once the draft entity
@@ -45,7 +44,6 @@ function drafty_entity_update($entity, $type) {
     // within entity insert. The other option is hook_exit(), which is not
     // better since for example that would happen outside the transaction.
     drafty()->restorePublishedRevisions();
-    drafty()->removeScope();
   }
   $recursion_level--;
 }
@@ -55,11 +53,6 @@ function drafty_entity_update($entity, $type) {
  */
 function drafty_entity_insert($entity, $type) {
   $recursion_level = &drupal_static('drafty_recursion_level', 0);
-  if ($recursion_level == 1) {
-    // Remove any drafty scope set during revision saving so that it is clear for
-    // the next save.
-    drafty()->removeScope();
-  }
   $recursion_level--;
 }
 
@@ -108,42 +101,6 @@ class Drafty {
    * A list of entity types, ids and version IDs to be published.
    */
   protected $revisionsToPublish = array();
-
-  /**
-   * The revision scope. Draft is TRUE, default revision is FALSE.
-   */
-  protected $scope = NULL;
-
-  /**
-   * Set the current scope.
-   *
-   * @param (bool) $scope
-   *   TRUE if a draft, FALSE if default revision.
-   */
-  public function setScope($scope) {
-    $this->scope = $scope;
-  }
-
-  /**
-   * Get the current scope.
-   */
-  public function getScope() {
-    return $this->scope;
-  }
-
-  /**
-   * Get the current scope.
-   */
-  public function hasScope() {
-    return isset($this->scope);
-  }
-
-  /**
-   * Reset the scope.
-   */
-  public function removeScope() {
-    $this->scope = NULL;
-  }
 
   public function wasRevisionRequested($entity) {
     return isset($entity->_drafty_revision_requested) && $entity->_drafty_revision_requested === FIELD_LOAD_REVISION;
@@ -230,9 +187,6 @@ class Drafty {
     list($id) = entity_extract_ids($type, $revision);
     $original = entity_load_single($type, $id);
     $revision->original = $original;
-    // Set scope to the value of is_draft_revision so that any recursively
-    // triggered entity_save() will not be concerned about draft tracking.
-    drafty()->setScope($revision->is_draft_revision);
     // @todo: entity API function?
     $revision->revision = TRUE;
     $revision->is_new_revision = TRUE;
