@@ -5,25 +5,25 @@
  */
 
 /**
+ * Implements hook_field_attach_submit().
+ */
+function drafty_field_attach_submit($entity_type, $entity, $form, &$form_state) {
+  // Only force a draft revision when the entity form is submitted.
+  list($id) = entity_extract_ids($entity_type, $entity);
+  $info = entity_get_info();
+  if (!empty($info[$entity_type]['entity keys']['revision']) && !empty($id)) {
+    $entity->is_draft_revision = TRUE;
+  }
+}
+
+/**
  * Implements hook_entity_presave().
  */
 function drafty_enforce_entity_presave($entity, $type) {
-  $info = entity_get_info();
-  if (!empty($info[$type]['entity keys']['revision']) && empty($entity->is_new)) {
-    // @todo: entity API function?
-    $entity->revision = TRUE;
-    $entity->is_new_revision = TRUE;
-    $entity->default_revision = TRUE;
-    // If Drafty has set a scope already, don't do anything here.
-    if (!drafty()->hasScope()) {
-      $entity->is_draft_revision = TRUE;
-      // Now set the scope so that any entity saves recursively triggered by
-      // this entity save such as field collections do not also trigger the
-      // draft code path. Since this 'parent' entity will have two revisions
-      // saved, that handles any 'child' entities too.
-      drafty()->setScope($entity->is_draft_revision);
-    }
-  }
+  // Always force a new revision.
+  $entity->revision = TRUE;
+  $entity->is_new_revision = TRUE;
+  $entity->default_revision = TRUE;
 }
 
 /**
