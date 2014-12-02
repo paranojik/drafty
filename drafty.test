@@ -259,3 +259,44 @@ class DraftyFieldCollectionTest extends DraftyWebTestCase {
 
 
 }
+
+/**
+ * Test draft revisions with entity translation.
+ */
+class DraftyEtTest extends  EntityTranslationTestCase {
+  public static function getInfo() {
+    return array(
+      'name' => 'Drafty Entity Translation',
+      'description' => 'Test revision manipulation with entity translation',
+      'group' => 'Drafty',
+    );
+  }
+
+  function setUp() {
+    parent::setUp('locale', 'entity_translation');
+    $this->login($this->getAdminUser());
+    $this->addLanguage('en');
+    $this->addLanguage('es');
+    $this->configureContentType();
+    $this->login($this->getTranslatorUser());
+  }
+
+  /**
+   * Test if field based translation works.
+   *
+   * Enable field based translation for basic pages. Add a field with a
+   * cardinality higher than 1, to test if field_default_extract_form_values()
+   * is invoked. Create a basic page and translate it.
+   */
+  function testFieldTranslation() {
+    // Create Basic page in English.
+    $node_title = $this->randomName();
+    $node_body = $this->randomName();
+    $node = $this->createPage($node_title, $node_body, 'en');
+
+    // Submit translation in Spanish.
+    $node_translation_title = $this->randomName();
+    $node_translation_body = $this->randomName();
+    $node_translation = $this->createTranslation($node, $node_translation_title, $node_translation_body, 'es');
+  }
+}
