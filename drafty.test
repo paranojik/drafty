@@ -273,7 +273,7 @@ class DraftyEtTest extends  EntityTranslationTestCase {
   }
 
   function setUp() {
-    parent::setUp('locale', 'entity_translation');
+    parent::setUp('locale', 'entity_translation', 'drafty_enforce', 'drafty_1992010');
     $this->login($this->getAdminUser());
     $this->addLanguage('en');
     $this->addLanguage('es');
@@ -293,10 +293,42 @@ class DraftyEtTest extends  EntityTranslationTestCase {
     $node_title = $this->randomName();
     $node_body = $this->randomName();
     $node = $this->createPage($node_title, $node_body, 'en');
+    $original_version = node_load($node->nid, NULL, TRUE);
 
     // Submit translation in Spanish.
     $node_translation_title = $this->randomName();
     $node_translation_body = $this->randomName();
     $node_translation = $this->createTranslation($node, $node_translation_title, $node_translation_body, 'es');
+    $published_version = node_load($node->nid, NULL, TRUE);
+
+    // At this point there should be three versions of the node:
+    //  - the original version with no translation.
+    //  - an unpublished version with a translation.
+    //  - the published version with no translation, identical to the original.
+    $this->assertTrue(!isset($original_version->body['es']), 'No Spanish translation on the original version');
+    $this->assertTrue(!isset($published_version->body['es']), 'No Spanish translation on the published version');
+
+    //  Drafty doesn't allow us to loading the draft revision while it's being
+    //  created by design, so find it manually based on the two revisions IDs
+    //  we know about.
+    $vid = db_select('node_revision')
+      ->fields('node_revision', array('vid'))
+      ->condition('nid', $node->nid)
+      ->condition('vid', array($original_version->vid, $published_version->vid), 'NOT IN')
+      ->execute()->fetchField();
+
+    $draft_version = node_load($node->nid, $vid);
+    $this->assertTrue($draft_version->body['es'], 'Spanish translation on the draft version');
+
+    // Now explicitly publish the draft.
+    drafty()->publishRevision('node', $node->nid, $draft_version->vid);
+    $new_published_version = node_load($node->nid, NULL, TRUE);
+    $this->assertTrue($draft_version->body['es'], 'Spanish translation on the newly published version');
+
+    // Now re-publish the original version, and ensure the translation is gone
+    // again.
+    drafty()->publishRevision('node', $node->nid, $original_version->vid);
+    $re_published_original = node_load($node->nid, NULL, TRUE);
+    $this->assertTrue(!isset($original_version->body['es']), 'No Spanish translation on the re-published original version');
   }
 }
