@@ -105,6 +105,10 @@ class Drafty {
     return isset($entity->_drafty_revision_requested) && $entity->_drafty_revision_requested === FIELD_LOAD_REVISION;
   }
 
+  public function isDraftRevision($entity) {
+    return !empty($entity->is_draft_revision);
+  }
+
   /**
    * Get the current published revision for an entity.
    *
