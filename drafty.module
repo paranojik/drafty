@@ -171,8 +171,7 @@ class Drafty {
     // saving. i.e. the draft we're in the process of creating and need to
     // replace with the published version again.
     $revision->is_draft_revision = FALSE;
-    entity_get_controller($type)->resetCache();
-    $revision->original = entity_load_single($type, $id);
+
     return $this->saveRevisionAsNew($type, $revision);
   }
 
@@ -188,13 +187,31 @@ class Drafty {
    */
   public function saveRevisionAsNew($type, $revision) {
     list($id) = entity_extract_ids($type, $revision);
+    entity_get_controller($type)->resetCache();
     $original = entity_load_single($type, $id);
     $revision->original = $original;
     // @todo: entity API function?
     $revision->revision = TRUE;
     $revision->is_new_revision = TRUE;
     $revision->default_revision = TRUE;
+    // Title module assumes that the current content language is used when
+    // saving an entity. This is OK for the new draft revision, but it does not
+    // work when publishing a revision. Therefore, ensure that
+    // title_active_language() reflects the original language of the entity.
+    // Without this, title may overwrite {$title}_field in the original language
+    // with the contents of the legacy field.
+    // @todo: this might not be necessary after one or both of these patches
+    // lands:
+    // https://www.drupal.org/node/2267251
+    // https://www.drupal.org/node/2098097
+    if (module_exists('title')) {
+      $language = title_entity_language($type, $revision);
+      title_active_language($language);
+      title_entity_sync_static_reset($type, array($id));
+      title_entity_sync($type, $revision, $language, FALSE);
+    }
     entity_save($type, $revision);
+
     return $revision;
   }
 

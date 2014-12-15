@@ -6,5 +6,6 @@ dependencies[] = entity
 
 test_dependencies[] = field_collection
 test_dependencies[] = entity_translation
-
+test_dependencies[] = title
+test_dependencies[] = taxonomy
 files[] = drafty.test
