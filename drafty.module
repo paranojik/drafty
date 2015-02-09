@@ -56,7 +56,7 @@ function drafty_entity_insert($entity, $type) {
 }
 
 /**
- * Implements hook_field_attach_update().
+ * Implements hook_field_attach_load().
  */
 function drafty_field_attach_load($entity_type, $entities, $age, $options) {
   // Entity API provides the function entity_revision_is_default() to determine
