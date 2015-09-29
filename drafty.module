@@ -170,16 +170,23 @@ class Drafty {
     // title_active_language() reflects the original language of the entity.
     // Without this, title may overwrite {$title}_field in the original language
     // with the contents of the legacy field.
-    // @todo: this might not be necessary after one or both of these patches
-    // lands:
-    // https://www.drupal.org/node/2267251
+    // @todo: this might not be necessary after this patch lands:
     // https://www.drupal.org/node/2098097
+    $langcode = NULL;
     if (module_exists('title')) {
       $entity = entity_load_single($type, $id);
       $langcode = entity_language($type, $entity);
       title_active_language($langcode);
     }
     $revision = entity_revision_load($type, $vid);
+
+    // Title module uses the form language to decide what language to use when
+    // syncing the title, but that will not be automatically set here since
+    // this is a programmatic save. Set it explicitly based on the original
+    // language of the entity that was determined above.
+    if (isset($langcode)) {
+      entity_translation_get_handler($type, $revision)->setFormLanguage($langcode);
+    }
 
     // Publishing a revision sometimes happens within hook_entity_update(). When
     // we do that, set $entity->original to the entity we're in the process of
